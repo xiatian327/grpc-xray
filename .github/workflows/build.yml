@@ -1,0 +1,36 @@
+name: 自动构建并推送 gRPC 镜像
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # 允许推送到 GitHub 镜像库 (ghcr.io)
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 登录到 GitHub 镜像库
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 转换仓库名为小写 (Docker 要求)
+      id: lowercase_repo
+      run: |
+        echo "REPO=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+
+    - name: 构建并推送镜像
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ghcr.io/${{ env.REPO }}:latest
